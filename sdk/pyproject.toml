@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=77,<81", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pandora-hy-mt2-1-8b"
+version = "1.0.0"
+description = "Hy-MT2 Python SDK with its matched Linux AArch64 inference library"
+readme = "PYTHON_PACKAGE.md"
+requires-python = ">=3.10,<3.13"
+license = "Apache-2.0 AND LicenseRef-Pandora-Model-SDK"
+license-files = ["python/LICENSE", "lib/LICENSE", "lib/THIRD_PARTY_NOTICES.txt", "lib/LICENSES/*"]
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/APLUX-Pandora/hy-mt2-1.8b-demo"
+
+[tool.setuptools]
+package-dir = {"" = "python"}
+packages = ["pandora_hy_mt2_1_8b", "pandora_hy_mt2_1_8b._runtime"]
+include-package-data = false

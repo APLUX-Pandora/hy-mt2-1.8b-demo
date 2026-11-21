@@ -1,0 +1,3 @@
+include native-library.json
+recursive-include lib *
+include qnn-runtime-files.json

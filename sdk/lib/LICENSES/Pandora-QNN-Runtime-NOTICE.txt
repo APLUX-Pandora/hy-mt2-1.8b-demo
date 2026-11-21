@@ -1,0 +1,4 @@
+Pandora QNN Runtime integration module
+Copyright 2026 APLUX
+Original integration code, helpers, tests and documentation: Apache License 2.0.
+Qualcomm vendor components retain their original terms; see vendor/qnn-2.48.0.260626/runtime/LICENSE.pdf, NOTICE.txt and QNN_NOTICE.txt.

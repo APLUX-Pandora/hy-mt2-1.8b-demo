@@ -1,0 +1,10 @@
+.venv*/
+__pycache__/
+*.pyc
+sdk/build/
+sdk/dist/
+sdk/python/*.egg-info/
+models/*
+!models/README.md
+translate_c
+*.log

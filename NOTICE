@@ -1,0 +1,42 @@
+Hy-MT2-1.8B Demo
+================
+
+APLUX application code, public interfaces and documentation: Apache-2.0 where
+designated in LICENSE. APLUX SDK implementation contributions: the scoped
+Pandora agreement in LICENSES/. Third-party rights remain with their owners.
+
+Upstream model (downloaded separately)
+  Tencent Hy-MT2-1.8B
+  https://huggingface.co/tencent/Hy-MT2-1.8B
+  Original comparison revision: 9a341cd1b679d3efd23b46e847b01745a71ed792
+  Upstream LICENSE.txt is preserved in LICENSES/Upstream-model.txt.
+  A comparison revision does not establish the exact conversion provenance of
+  the device model resources. Those resources retain their upstream terms.
+
+Components embedded in sdk/lib/libhy_mt2.so
+  nlohmann/json: Copyright (c) 2013-2022 Niels Lohmann. MIT terms:
+  sdk/lib/LICENSES/nlohmann-json.txt.
+  OpenSSL 3.0.2 from Ubuntu 3.0.2-0ubuntu1.30: Apache-2.0 terms and
+  upstream attributions in sdk/lib/LICENSES/OpenSSL-copyright.txt.
+  Pandora model-format: APLUX-owned contributions use the scoped SDK agreement.
+  Qualcomm Genie and Rust tokenizer dependencies retain their supplier and
+  open-source terms. See sdk/lib/THIRD_PARTY_NOTICES.txt and sdk/lib/LICENSES/.
+
+Included QNN runtime libraries
+  sdk/lib/qnn248/ includes the unchanged QNN user-space libraries and their
+  supplier/open-source notices. The embedded common runtime adapter is Apache-2.0;
+  its license and notices are included in sdk/lib/LICENSES/Pandora-QNN-Runtime-*.txt.
+
+External device dependencies (not bundled)
+  Device BSP/drivers, AidLMS, FastRPC, DSP firmware and basic system libraries
+  retain their separate terms. The SDK includes Genie.
+
+Python dependency (installed separately)
+  Flask 3.1.3 and its installed dependencies retain their upstream licenses.
+
+Sample data and branding
+  demo/samples.json contains authored illustrative multilingual meeting notices;
+  they are not certified reference translations. APLUX/Pandora marks are brand
+  assets and are not licensed as generic artwork by the application-code license.
+  Any project-owner-supplied recording is illustrative documentation, not an
+  inference benchmark. No model weights or external dataset text are bundled.

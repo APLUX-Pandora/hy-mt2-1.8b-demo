@@ -1,0 +1,26 @@
+Third-party components in the precompiled Hy-MT2 SDK
+===================================================
+
+nlohmann/json: Copyright (c) 2013-2022 Niels Lohmann. MIT terms:
+LICENSES/nlohmann-json.txt.
+
+OpenSSL 3.0.2 from Ubuntu 3.0.2-0ubuntu1.30: Apache-2.0 terms and
+upstream attributions in LICENSES/OpenSSL-copyright.txt.
+
+Pandora model-format is embedded in the SDK. APLUX-owned SDK
+contributions are covered by LICENSES/Pandora-Model-SDK.zh-CN.txt and its English
+translation. Third-party permissions are not replaced by that agreement.
+
+Qualcomm Genie 2.48 and Rust tokenizer dependencies are linked into the SDK.
+Qualcomm copyright and open-source notices:
+LICENSES/Qualcomm-QAIRT-2.48-NOTICE.txt.
+Rust dependency license texts: LICENSES/rust/.
+These components retain their applicable supplier and open-source terms.
+
+Qualcomm QNN user-space runtime libraries are included unchanged in qnn248/.
+Their supplier and open-source notices are preserved in that directory.
+The embedded common runtime adapter is Apache-2.0; its license and notices
+are preserved in LICENSES/Pandora-QNN-Runtime-{LICENSE,NOTICE}.txt.
+AidLMS, RPC, DSP firmware and operating-system runtimes remain external and
+retain their own terms. No supplier credentials, generated
+model-key source or recovered model plaintext are distributed.

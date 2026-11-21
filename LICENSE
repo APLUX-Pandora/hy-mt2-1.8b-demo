@@ -1,0 +1,24 @@
+Licensing index
+===============
+
+Application and business code, examples, C ABI headers, Python bindings, build
+scripts, and documentation authored for this project are designated Apache-2.0.
+See LICENSES/Apache-2.0.txt.
+
+APLUX-authored proprietary SDK implementation contributions in the precompiled SDK library are
+covered by LICENSES/Pandora-Model-SDK.zh-CN.txt and its English translation.
+The agreement applies only to rights APLUX owns or is authorized to license.
+It does not replace or revoke upstream or third-party permissions. Binary form
+or quantization does not by itself establish proprietary rights.
+
+Model weights and tokenizer data are distributed separately and retain their
+applicable upstream terms. This SDK includes Qualcomm Genie linked into
+sdk/lib/libhy_mt2.so and unchanged Qualcomm QNN user-space runtime libraries in
+sdk/lib/qnn248/. These components retain their supplier and open-source terms;
+see sdk/lib/THIRD_PARTY_NOTICES.txt, sdk/lib/LICENSES/ and sdk/lib/qnn248/.
+Device BSP/drivers, AidLMS, FastRPC, DSP firmware and basic system libraries are
+external device prerequisites and are not bundled. They retain their own terms.
+
+This repository includes public Python source, C ABI headers and the paired
+precompiled sdk/lib/libhy_mt2.so, together with its licensing files. The native
+C/C++ implementation and private build inputs are not part of this delivery.

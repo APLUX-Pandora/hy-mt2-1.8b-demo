@@ -1,0 +1,15 @@
+SDK licensing scope
+===================
+
+APLUX proprietary implementation contributions are covered only to the extent
+APLUX owns or may license them by LICENSES/Pandora-Model-SDK.zh-CN.txt and its
+English translation LICENSES/Pandora-Model-SDK.en.txt. Third-party code retains
+its applicable terms. The interface header and verifier are Apache-2.0.
+Qualcomm Genie and tokenizer components are linked into libhy_mt2.so; their
+supplier and open-source terms are listed in THIRD_PARTY_NOTICES.txt and LICENSES/.
+Unchanged Qualcomm QNN user-space runtime libraries are included in qnn248/;
+retain qnn248/LICENSE.pdf, qnn248/NOTICE.txt and qnn248/QNN_NOTICE.txt with them.
+Device BSP/drivers, AidLMS, FastRPC, DSP firmware and basic system libraries remain
+external device prerequisites. Model weights and tokenizer data are distributed
+separately. These external components retain their own terms.
+Keep these notices and accompanying full license texts with this SDK payload.

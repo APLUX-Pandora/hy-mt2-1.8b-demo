@@ -1,0 +1,11 @@
+{
+  "filename": "libhy_mt2.so",
+  "sha256": "cdab1924d65f8f6dbcb76e36b17b56b23d431106d7a9fa6e81a42f3b5564314f",
+  "sdk_version": "1.0.0",
+  "channel": "candidate",
+  "runtime_abi": 4,
+  "qnn_runtime_manifest_sha256": "d4e865d88e9b71f0eed0c5259a0e4dfe908a599cfa2852be2507946ca9ed1f74",
+  "qnn_runtime_module": "533ca28102decd7b306b6f7ec9a4dc503684f35c",
+  "model_format_module": "2b0eda3c8abeaf9f15ea6885e146a3a2f8c06f77",
+  "source_revision": "288f0aa551cafc4f4924d8a426b77f0340de8f8d"
+}
