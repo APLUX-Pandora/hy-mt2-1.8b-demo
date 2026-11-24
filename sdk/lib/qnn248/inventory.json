@@ -1,5 +1,6 @@
 {
   "qnn": "2.48.0.260626",
+  "source": "Qualcomm QNN SDK 2.48.0.260626",
   "files": [
     {
       "source": "lib/aarch64-oe-linux-gcc11.2/libQnnHtp.so",

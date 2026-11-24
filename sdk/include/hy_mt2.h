@@ -8,7 +8,7 @@
 #else
 #define HY_MT2_API __attribute__((visibility("default")))
 #endif
-#define HY_MT2_VERSION "1.0.0"
+#define HY_MT2_VERSION "1.1.0"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -69,9 +69,9 @@ HY_MT2_API const char *hy_mt2_last_error(hy_mt2_engine *engine);
 HY_MT2_API int hy_mt2_count_prompt_tokens(hy_mt2_engine *engine, const char *utf8, const char *source, const char *target);
 HY_MT2_API int hy_mt2_start(hy_mt2_engine *engine, const char *utf8, const char *source, const char *target);
 /* Generic LLM request: JSON object with messages (role/content string array).
- * Omitted/null controls resolve per request: max_new_tokens=256, do_sample=false,
- * temperature=1, top_p=1, top_k=0, repetition_penalty=1.
- * Explicit temperature/top_p/top_k require do_sample=true; top_k=0 disables filtering.
+ * Omitted/null sampling controls use the loaded model package defaults.
+ * max_new_tokens defaults to 256. Explicit temperature/top_p/top_k require
+ * sampling to be enabled. top_k=0 disables candidate count filtering.
  * The configured context has 8192 total positions for the rendered prompt
  * (including BOS) and generated tokens. The effective output limit is the
  * smaller of the requested new tokens and the remaining configured context.

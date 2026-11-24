@@ -4,7 +4,7 @@ Load a local Hy-MT2-1.8B model and translate text from Python or C.
 
 ## What's included
 
-The Python package path is relative to the installed environment. `SHA256SUMS` covers the bundled native library and QNN runtime files.
+The Python package path is relative to the installed environment. `SHA256SUMS` covers the bundled native library, QNN runtime files and shared Runtime interfaces.
 
 | Path | Content |
 | --- | --- |
@@ -15,11 +15,10 @@ The Python package path is relative to the installed environment. `SHA256SUMS` c
 
 ## Install
 
-See [Demo installation](../README.md#1-install) to clone the Demo and create the environment.
-
 In your application's activated Python 3.10–3.12 environment, from the Demo root:
 
 ```bash
+python -m pip install sdk/wheels/pandora_runtime-*.whl
 python -m pip install ./sdk
 ```
 
@@ -32,7 +31,7 @@ After [model setup](../docs/MODEL_SETUP.md), run from the Demo root in the same 
 **Chinese-related translation — use this template when either language is Chinese.**
 Fill `target_language` with a Chinese name from the language table, such as `英语`.
 
-The examples explicitly pass this Demo's translation preset. SDK omission/None instead uses max_new_tokens=256, do_sample=False, temperature=1.0, top_p=1.0, top_k=0 and repetition_penalty=1.0. The Demo uses an explicit 4096-token ceiling to preserve its EOS/context-bounded behavior; the total context and input limits still apply.
+The examples explicitly pass this Demo's translation preset. Omitted sampling options use the loaded model package defaults. The SDK defaults to a 256-token output limit. The Demo uses an explicit 4096-token ceiling to preserve its EOS/context-bounded behavior; the total context and input limits still apply.
 
 ```python
 from pandora_hy_mt2_1_8b import LanguageModel

@@ -1,13 +1,16 @@
 # C ABI
 
-The public headers are [hy_mt2.h](../sdk/include/hy_mt2.h) and [pandora_runtime.h](../sdk/include/pandora_runtime.h). C and Python use the same `libhy_mt2.so`.
+The public headers are [hy_mt2.h](../sdk/include/hy_mt2.h) and [pandora_runtime.h](../sdk/include/pandora_runtime.h). C and Python use the same model library and shared Runtime provider.
 
 ## Build and link
+
+Activate the environment prepared by the [SDK installation](../sdk/README.md#install).
 
 From the Demo root, compile against the shipped header and library; the library carries its QNN runtime:
 
 ```bash
-cc -std=c99 -Wall -Wextra -Werror -I sdk/include examples/c/translate.c -L sdk/lib -lhy_mt2 -Wl,-rpath,'$ORIGIN/sdk/lib' -o translate_c
+runtime_dir=$(python -c "import pathlib,pandora_runtime; print(pathlib.Path(pandora_runtime.__file__).parent)")
+cc -std=c99 -Wall -Wextra -Werror -I sdk/include examples/c/translate.c -L sdk/lib -L"$runtime_dir" -Wl,--no-as-needed -l:libpandora_runtime.so.5 -Wl,--as-needed -Wl,-rpath,"$runtime_dir" -lhy_mt2 -Wl,-rpath,'$ORIGIN/sdk/lib' -o translate_c
 ./translate_c models
 ```
 
@@ -21,9 +24,9 @@ Each start creates a fresh translation request. Pass one user message with an op
 
 ### Generation defaults and Demo preset
 
-Omitted or null generation fields resolve per request to `max_new_tokens=256`, `do_sample=false`, `temperature=1.0`, `top_p=1.0`, `top_k=0` and `repetition_penalty=1.0`. Explicit sampling fields require `do_sample=true`. The Demo preset supplies all six fields explicitly, including a 4096-token ceiling.
+Omitted or null sampling fields use the model package sampler on each request. Explicit fields override the loaded defaults for that request. Temperature, top-p and top-k overrides require sampling to be enabled. The SDK defaults to `max_new_tokens=256`. Read model defaults through `hy_mt2_get_info`. The Demo preset supplies all six fields explicitly, including a 4096-token ceiling.
 
-`hy_mt2_options.max_input_tokens` defaults to 512 and accepts 32–8191 rendered prompt tokens, including BOS and the prompt template. Python uses a fixed budget of 2048. Input over the budget is rejected without truncation. The total configured context is 8192 positions. The effective output limit is the smaller of the requested new tokens and the remaining context. The terminal result reports `stop`, `length` or `cancelled`. A backend error returns a negative status.
+`hy_mt2_options.max_input_tokens` defaults to 512 and accepts 32–8191 rendered prompt tokens, including BOS and the prompt template. Python uses a fixed budget of 2048. Input over the budget is rejected without truncation. The total configured context is 8192 positions. The effective output limit is the smaller of the requested new tokens and the remaining context. The result JSON also reports the actual number of skipped prefix tokens as `skipped_prefix_tokens`. The terminal result reports `stop`, `length` or `cancelled`. A backend error returns a negative status.
 
 ## Functions
 
@@ -41,12 +44,11 @@ Omitted or null generation fields resolve per request to `max_new_tokens=256`, `
 | `hy_mt2_get_stats` | Read request state and counters | Status |
 | `pandora_runtime_create`, `pandora_runtime_destroy` | Create or release a Runtime | Status |
 | `pandora_runtime_last_error` | Read the latest Runtime error | Borrowed string |
-| `pandora_runtime_get_status`, `pandora_runtime_get_capabilities`, `pandora_runtime_get_submission_status`, `pandora_runtime_get_device_status` | Query Runtime availability, capabilities, submission and device status | Status |
-| `pandora_runtime_get_cpu_status`, `pandora_runtime_get_cpu_ids`, `pandora_runtime_get_cpu_thread`, `pandora_runtime_get_cpu_profile` | Query CPU status, IDs, thread affinity or profile | Status. Supply capacity for array or JSON output |
+| `pandora_runtime_get_status` | Read the applied hardware settings | Status |
 
 A null Runtime uses CPU default, burst performance, normal priority and device 0. Explicit CPU arrays are copied. Requested CPU IDs must be online and allowed. See the [Runtime reference](../sdk/RUNTIME_API.md) and the public header for configuration and query buffer sizes.
 
-For `pandora_runtime_get_cpu_profile`, supply a writable buffer and its capacity in bytes, including room for the terminating NUL. The function returns 0 and writes a NUL-terminated JSON string on success. A null buffer, zero capacity or insufficient space returns `HY_MT2_ARG` (-1), with no output written. Use `pandora_runtime_last_error` for the error message. The function has no size-query mode.
+For Runtime status, initialize the snapshot's struct_size and ABI version from the shared header before calling the query. Runtime calls use PANDORA_RUNTIME_ERROR_* and pandora_runtime_last_error for failures. When migrating from an earlier Runtime ABI, recompile against the shared header, use PANDORA_RUNTIME_CONFIG_INIT for default settings and use the flat configuration and status fields. Replace legacy capability and submission queries with the shared status query. Replace inherit affinity with default affinity or explicit CPU IDs.
 
 ## Error codes
 
@@ -63,7 +65,7 @@ For `pandora_runtime_get_cpu_profile`, supply a writable buffer and its capacity
 
 ## Threads and ownership
 
-Use one model per process and one active request per model. Only `hy_mt2_abort`, `hy_mt2_read_text` and `hy_mt2_get_stats` may overlap generation. The synchronous generation caller runs notifications. Request cancellation from a separate thread, outside the callback. Wait for generation and readers before destroying the model. Release caller-owned Runtime handles after their models. Create fresh model and Runtime objects in child processes.
+Use one model per process and one active request per model. Only `hy_mt2_abort`, `hy_mt2_read_text` and `hy_mt2_get_stats` may overlap generation. The synchronous generation caller runs notifications. Request cancellation from a separate thread, outside the callback. Wait for generation and readers before destroying the model. Models keep a Runtime reference, so releasing a caller-owned Runtime handle early leaves loaded models usable. Create fresh model and Runtime objects in child processes.
 
 Input strings are borrowed for the call and copied before any later use. Output bytes are copied into caller-owned buffers and can end mid-character. Decode incrementally. Error strings are borrowed until the next relevant call. Initialize structures with the exact size and ABI fields declared in the headers.
 

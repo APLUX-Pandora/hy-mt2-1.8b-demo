@@ -45,23 +45,23 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-This installs the SDK, the Web Demo and the Hugging Face CLI. To use only the SDK in your own application, run `python -m pip install ./sdk` in that application's environment.
+This installs the SDK, the Web Demo and the Hugging Face CLI. To use only the SDK in your own application, see the [SDK installation](sdk/README.md#install).
 
-The checkout includes a prebuilt native library. Installation checks the bundled files, and the SDK checks the native library version and Runtime ABI when loading the model.
+The checkout includes a prebuilt native library and the bundled Runtime wheel. SDK installation verifies the native library and QNN runtime files. The SDK checks the native library version and Runtime ABI when loading the model.
 
 <a id="download-one-target"></a>
 ## 2. Get the model
 
-Download the shared resources and the target for your device. This example uses QCS8625:
+Download the shared files and one device target. The commands below use QCS8625; for another device, use the folder in the [targets table](docs/MODEL_SETUP.md#targets).
+
+For a private model, run `hf auth login` first.
 
 ```bash
 hf download APLUX-Pandora/Hy-MT2-1.8B --local-dir models --exclude "targets/*" --exclude "media/*" --exclude README.md --exclude .gitattributes
 hf download APLUX-Pandora/Hy-MT2-1.8B --local-dir models --include "targets/qcs8625_qnn248/*"
 ```
 
-For a private repository, run `hf auth login` first. Available targets and the folder layout are in [Model setup](docs/MODEL_SETUP.md).
-
-Verify the downloaded model package before use:
+Verify the downloaded target:
 
 ```bash
 python demo/prepare_models.py models
@@ -83,7 +83,7 @@ In the same environment, from the Demo root:
 **Chinese-related translation — use this template when either language is Chinese.**
 Fill `target_language` with a Chinese name from the language table, such as `英语`.
 
-The examples explicitly pass this Demo's translation preset. SDK omission/None instead uses max_new_tokens=256, do_sample=False, temperature=1.0, top_p=1.0, top_k=0 and repetition_penalty=1.0. The Demo uses an explicit 4096-token ceiling to preserve its EOS/context-bounded behavior; the total context and input limits still apply.
+The examples explicitly pass this Demo's translation preset. Omitted sampling options use the loaded model package defaults. The SDK defaults to a 256-token output limit. The Demo uses an explicit 4096-token ceiling to preserve its EOS/context-bounded behavior; the total context and input limits still apply.
 
 ```python
 from pandora_hy_mt2_1_8b import LanguageModel

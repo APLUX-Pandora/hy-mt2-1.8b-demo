@@ -34,11 +34,23 @@ def validate_model_package(directory):
     if type(doc.get("format_version")) is not int or doc["format_version"] != 2 or doc.get("model") != "Hy-MT2-1.8B":
         raise ValueError("Unsupported models.json format/model")
     resources = doc["resources"]
-    prefix = _path(root, resources["prefix"])
+    prefix_config = resources["prefix"]
+    if not isinstance(prefix_config, dict) or not {"path", "tokens"} <= prefix_config.keys():
+        raise ValueError("Prefix requires a path and token IDs")
+    prefix = _path(root, prefix_config["path"])
+    template = doc.get("chat_template")
+    bos = template.get("bos") if isinstance(template, dict) else None
+    if not isinstance(bos, str) or not bos or "\0" in bos:
+        raise ValueError("Invalid chat template BOS")
     tokenizer = _path(root, resources["tokenizer"])
     lut = resources["embedding"]
     if lut["dtype"] != "float32-le" or lut["layout"] != "row-major" or lut["shape"] != [120818, 2048]:
         raise ValueError("Invalid embedding layout")
+    tokens = prefix_config["tokens"]
+    if not isinstance(tokens, list) or not tokens or any(
+        type(token) is not int or not 0 <= token < lut["shape"][0] for token in tokens
+    ):
+        raise ValueError("Invalid prefix token IDs")
     embedding = _path(root, lut["path"])
     for path in (prefix, tokenizer, embedding):
         _file(path)

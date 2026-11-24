@@ -15,8 +15,6 @@ from flask import Flask, Response, jsonify, request, send_from_directory
 from pandora_hy_mt2_1_8b._native import resolve_model_dir
 from pandora_hy_mt2_1_8b._native import TranslationError
 from translation import Translator
-from pandora_hy_mt2_1_8b import Runtime
-from cpu_options import add_cpu_argument
 from long_text import translate_document
 
 ROOT = Path(__file__).resolve().parent
@@ -329,7 +327,6 @@ if __name__ == "__main__":
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=51106)
     parser.add_argument("--timeout", type=float, default=120)
-    add_cpu_argument(parser)
     args = parser.parse_args()
     if args.timeout <= 0:
         parser.error("timeout must be positive")
@@ -339,7 +336,6 @@ if __name__ == "__main__":
     try:
         model_dir = resolve_model_dir(args.model_dir, default_container=ROOT.parent / "models")
         print(f"Model package: {model_dir}", file=sys.stderr)
-        with Runtime(cpu=args.cpu_affinity) as runtime:
-            serve(lambda: Translator(model_dir, max_input_tokens=2048,runtime=runtime), args.host, args.port, args.timeout, level)
+        serve(lambda: Translator(model_dir, max_input_tokens=2048), args.host, args.port, args.timeout, level)
     except TranslationError as exc:
         parser.exit(1, f"Model setup failed (code {exc.code}): {exc}\n")

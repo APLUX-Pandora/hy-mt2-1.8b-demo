@@ -9,7 +9,7 @@ Complete [SDK installation](README.md) and [model preparation](../docs/MODEL_SET
 **Chinese-related translation — use this template when either language is Chinese.**
 Fill `target_language` with a Chinese name from the language table, such as `英语`.
 
-The examples explicitly pass this Demo's translation preset. SDK omission/None instead uses max_new_tokens=256, do_sample=False, temperature=1.0, top_p=1.0, top_k=0 and repetition_penalty=1.0. The Demo uses an explicit 4096-token ceiling to preserve its EOS/context-bounded behavior; the total context and input limits still apply.
+The examples explicitly pass this Demo's translation preset. Omitted sampling options use the loaded model package defaults. The SDK defaults to a 256-token output limit. The Demo uses an explicit 4096-token ceiling to preserve its EOS/context-bounded behavior; the total context and input limits still apply.
 
 ```python
 from pandora_hy_mt2_1_8b import LanguageModel
@@ -76,7 +76,7 @@ Each call uses only its supplied input. Translation can contain errors in names,
 | `model.generate(messages, *, max_new_tokens=None, do_sample=None, temperature=None, top_p=None, top_k=None, repetition_penalty=None, return_audio=False)` | Generate text to completion | `GenerationResult` | Quick start |
 | `model.generate_stream(messages, *, max_new_tokens=None, do_sample=None, temperature=None, top_p=None, top_k=None, repetition_penalty=None, return_audio=False)` | Create a lazy, owned text stream; generation starts on iteration | `GenerationStream` iterator/context manager | Streaming below |
 | `model.capabilities` | Read supported inputs, outputs and generation controls | Frozen `GenerationCapabilities` | `print(model.capabilities)` after loading |
-| `model.generation_config` | Read the six common SDK generation defaults, including max_new_tokens | Read-only mapping | `print(dict(model.generation_config))` after loading |
+| `model.generation_config` | Read the loaded package sampler defaults and the SDK output token limit | Read-only mapping | `print(dict(model.generation_config))` after loading |
 | `model.close()` | Close an idle model; also called by model context-manager exit | `None` | Quick start |
 | `iter(stream)` / `next(stream)` | Receive Unicode updates, including one terminal update | `GenerationUpdate`; then StopIteration | Streaming below |
 | `stream.result` | Read the final result after completion or cancellation of a started stream | `GenerationResult` | Streaming below |
@@ -135,14 +135,14 @@ short code for the full name. No `None` or `auto` language selection is provided
 | Parameter | Type | Required / omitted or None resolution | Legal values and restrictions | Unit |
 | --- | --- | --- | --- | --- |
 | max_new_tokens | int or None | Optional; **256** | 1..2147483647; upper bound on new output tokens. The native engine may apply a lower limit based on the remaining context. | Output tokens |
-| do_sample | bool or None | Optional; **False** | False is greedy; True enables sampling. Explicit non-None sampling fields require True. | None |
-| temperature | int/float or None | Optional; **1.0** | Positive finite value, bool rejected; sampling only. | Dimensionless |
-| top_p | int/float or None | Optional; **1.0** | Finite (0,1]; 1 disables nucleus filtering; bool rejected. | Probability mass |
-| top_k | int or None | Optional; **0** | 0 disables filtering; 2..2147483647 selects candidates. Explicit 1 conflicts with the backend greedy strategy; use do_sample=False without sampling fields. | Candidate count |
-| repetition_penalty | int/float or None | Optional; **1.0** | Positive finite value; 1 disables penalty; bool rejected. | Dimensionless |
+| do_sample | bool or None | Optional, package sampler | False selects greedy decoding. True enables sampling. | None |
+| temperature | int/float or None | Optional, package sampler | Positive finite value, bool rejected; sampling only. | Dimensionless |
+| top_p | int/float or None | Optional, package sampler | Finite (0,1]; 1 disables nucleus filtering; bool rejected. | Probability mass |
+| top_k | int or None | Optional, package sampler | 0 disables filtering; 2..2147483647 selects candidates. Explicit 1 conflicts with the backend greedy strategy; use do_sample=False without sampling fields. | Candidate count |
+| repetition_penalty | int/float or None | Optional, package sampler | Positive finite value; 1 disables penalty; bool rejected. | Dimensionless |
 | `return_audio` | bool | Optional; **False** | False only. True raises UnsupportedFeatureError; None/non-bool raises InputError. | None |
 
-Omission and None resolve independently to the six common defaults on every request, including after Demo/custom calls. Explicit sampling fields require do_sample=True; neutral defaults do not enable sampling. The Demo explicitly passes max_new_tokens=4096, do_sample=True, temperature=0.7, top_p=0.6, top_k=20 and repetition_penalty=1.05. Configured seed is 42 with no public override; a fixed configured seed does not promise equivalence to other runtimes' random streams. BOS/EOS, template, prefix, context and RoPE are fixed model behavior, not adjustable generation keywords. Web/example explicit settings do not redefine these defaults.
+Omitted values and `None` use the loaded package defaults on every request. Explicit options override those defaults for the current request. Temperature, top-p and top-k overrides require sampling to be enabled. Explicit greedy decoding selects one candidate. Explicit sampling with a packed top-k of 1 disables the candidate count filter when top-k is omitted. The Demo explicitly passes `max_new_tokens=4096`, `do_sample=True`, `temperature=0.7`, `top_p=0.6`, `top_k=20` and `repetition_penalty=1.05`. The sampler uses the model package seed. The model defines BOS, EOS, template, prefix, context and RoPE.
 
 ## Results and cleanup
 
@@ -167,7 +167,7 @@ Omission and None resolve independently to the six common defaults on every requ
 | `BusyError` | A stream is owned/being iterated or result is not yet final; finish/close the relevant work first |
 | `ClosedError` | Model or stream is closed |
 | `InferenceError` | Loading/backend/generation failure; close the model and recreate it after resolving the cause |
-| `RuntimeNativeError` | Runtime native failure with code/native_code; see Runtime reference |
+| `RuntimeNativeError` | Runtime native failure with `code` (a PANDORA_RUNTIME_ERROR_* value); see Runtime reference |
 
 These classes are exported from pandora_hy_mt2_1_8b. File-system/type errors can also propagate from model preparation. Models, streams and Runtime objects are process-local; do not inherit live objects through fork, use spawn/exec.
 

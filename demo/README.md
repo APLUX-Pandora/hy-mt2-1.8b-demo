@@ -12,7 +12,7 @@ Language selection, translation instructions, document segmentation, HTTP jobs a
 
 The model serves one request at a time. Busy requests are rejected. Stop/disconnect requests cancellation; completion is only reported after a terminal event. Failed native inference requires Reload model. Shutdown stops admission, joins in-flight jobs and handlers, then closes the model.
 
---cpu-affinity default (default), inherit, or comma-separated CPU IDs configures the model Runtime. --host defaults0.0.0.0; --port defaults51106; --timeout defaults120seconds per segment (long requests also have a600second total deadline). No authentication/TLS is provided; use a trusted LAN.
+--host defaults0.0.0.0; --port defaults51106; --timeout defaults120seconds per segment (long requests also have a600second total deadline). No authentication/TLS is provided; use a trusted LAN.
 
 ## Recording
 
@@ -38,5 +38,5 @@ The SDK accepts text messages and translation instructions; this language select
 
 ## Generation defaults and Demo preset
 
-The examples explicitly pass this Demo's translation preset. SDK omission/None instead uses max_new_tokens=256, do_sample=False, temperature=1.0, top_p=1.0, top_k=0 and repetition_penalty=1.0. The Demo uses an explicit 4096-token ceiling to preserve its EOS/context-bounded behavior; the total context and input limits still apply.
-Python examples pass the confirmed values as individual keyword arguments; Web maps each application setting to its named SDK parameter; C examples explicitly set the same six JSON fields. C omission/null resolves to the common defaults independently per request; top_k=0 disables filtering and explicit sampling fields require do_sample=true. Request token limits report length. Existing C struct sizes and function signatures are unchanged.
+The examples explicitly pass this Demo's translation preset. Omitted sampling options use the loaded model package defaults. The SDK defaults to a 256-token output limit. The Demo uses an explicit 4096-token ceiling to preserve its EOS/context-bounded behavior; the total context and input limits still apply.
+Python examples pass the confirmed values as individual keyword arguments; Web maps each application setting to its named SDK parameter; C examples explicitly set the same six JSON fields. Omitted or null C sampling fields use the model package defaults for each request. A top-k of zero disables candidate count filtering. Request token limits report length. Existing C struct sizes and function signatures are unchanged.

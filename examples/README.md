@@ -7,7 +7,6 @@
 | [python/translate_with_chinese.py](python/translate_with_chinese.py) | Chinese → English and English → Chinese using Chinese instructions |
 | [python/translate_without_chinese.py](python/translate_without_chinese.py) | English → French using an English instruction |
 | [c/translate.c](c/translate.c) | C translation using an output callback |
-| [c/runtime.c](c/runtime.c) | Runtime status and optional translation |
 
 ## Before you run
 
@@ -55,7 +54,8 @@ Build against the headers and prebuilt library in `sdk/`:
 ### translate.c
 
 ```bash
-cc -std=c99 -Wall -Wextra -Werror -I sdk/include examples/c/translate.c -L sdk/lib -lhy_mt2 -Wl,-rpath,'$ORIGIN/sdk/lib' -o translate_c
+runtime_dir=$(python -c "import pathlib,pandora_runtime; print(pathlib.Path(pandora_runtime.__file__).parent)")
+cc -std=c99 -Wall -Wextra -Werror -I sdk/include examples/c/translate.c -L sdk/lib -L"$runtime_dir" -Wl,--no-as-needed -l:libpandora_runtime.so.5 -Wl,--as-needed -Wl,-rpath,"$runtime_dir" -lhy_mt2 -Wl,-rpath,'$ORIGIN/sdk/lib' -o translate_c
 ./translate_c models
 ```
 
@@ -64,24 +64,6 @@ Output:
 ```text
 早上好。
 ```
-
-### runtime.c
-
-Query the Runtime and optionally pass the prepared model directory to translate.
-
-```bash
-cc -std=c99 -Wall -Wextra -Werror -I sdk/include examples/c/runtime.c -L sdk/lib -lhy_mt2 -Wl,-rpath,'$ORIGIN/sdk/lib' -o runtime_c
-./runtime_c
-./runtime_c models
-```
-
-Translation output when a model directory is supplied:
-
-```text
-你好。
-```
-
-See [C ABI](../docs/C_ABI.md) for ownership and error handling and [Runtime options](../sdk/RUNTIME_API.md) for the status fields.
 
 ## Reference
 

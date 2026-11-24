@@ -1,9 +1,16 @@
 """Synchronous ctypes binding with Runtime-controlled native execution ownership."""
 import codecs
 import ctypes as C
+from functools import lru_cache
 import json
 import os
 from pathlib import Path
+
+from pandora_runtime import load_library as load_runtime_library
+
+from . import _runtime
+
+_RUNTIME_ABI = 5
 
 
 class TranslationError(RuntimeError):
@@ -35,6 +42,36 @@ class Stats(C.Structure):
 NOTIFY = C.CFUNCTYPE(None, C.c_void_p)
 
 
+@lru_cache(maxsize=1)
+def _matched_library():
+    """Load the native library paired with this SDK."""
+    selected = Path(__file__).with_name("_runtime") / "libhy_mt2.so"
+    if not selected.is_file():
+        raise FileNotFoundError("Installed SDK is missing its matched native library")
+    try:
+        pairing = json.loads(selected.with_name("native-library.json").read_text(encoding="utf-8"))
+        expected_version = pairing["sdk_version"]
+        expected_abi = pairing["runtime_abi"]
+        if not isinstance(expected_version, str) or not expected_version or type(expected_abi) is not int:
+            raise ValueError("invalid SDK version or Runtime ABI")
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise TranslationError(-5, "Invalid installed native SDK pairing metadata") from exc
+    if expected_abi != _RUNTIME_ABI:
+        raise TranslationError(-5, f"Native SDK Runtime ABI mismatch (expected {_RUNTIME_ABI}, found {expected_abi})")
+    load_runtime_library()
+    lib = C.CDLL(str(selected))
+    lib.hy_mt2_version.argtypes = []
+    lib.hy_mt2_version.restype = C.c_char_p
+    raw_version = lib.hy_mt2_version()
+    version = raw_version.decode("utf-8", "replace") if raw_version else None
+    if version != expected_version:
+        raise TranslationError(-5, f"Native SDK version mismatch (expected {expected_version!r}, found {version!r})")
+    return lib
+
+
+library = _matched_library
+
+
 class _NativeModel:
     """One instance per process; close only after generation and readers finish.
 
@@ -57,34 +94,11 @@ class _NativeModel:
             if not isinstance(path,str) or len(path)>4096 or len(os.fsencode(path))>4096 or "\0" in path:
                 raise TranslationError(-1,"Model directory must be a path of at most 4096 bytes without NUL")
         self.model_dir = resolve_model_dir(model_dir)
-        expected_version = None
-        if library is not None:
-            selected = Path(library).expanduser().resolve(strict=True)
+        if library is None:
+            self._lib = _matched_library()
         else:
-            from . import _runtime as hy_mt2_runtime
-            selected = Path(hy_mt2_runtime.__file__).parent / "libhy_mt2.so"
-            if not selected.is_file():
-                raise FileNotFoundError("Installed SDK is missing its matched native library")
-            try:
-                pairing = json.loads(selected.with_name("native-library.json").read_text(encoding="utf-8"))
-                expected_version = pairing["sdk_version"]
-                expected_abi = pairing["runtime_abi"]
-                if not isinstance(expected_version, str) or not expected_version or type(expected_abi) is not int:
-                    raise ValueError("invalid SDK version or Runtime ABI")
-            except (OSError, ValueError, KeyError, TypeError) as exc:
-                raise TranslationError(-5, "Invalid installed native SDK pairing metadata") from exc
-            if expected_abi != _RUNTIME_ABI:
-                raise TranslationError(-5, f"Native SDK Runtime ABI mismatch (expected {_RUNTIME_ABI}, found {expected_abi})")
-        self._lib = C.CDLL(str(selected))
-        if expected_version is not None:
-            self._lib.hy_mt2_version.argtypes = []
-            self._lib.hy_mt2_version.restype = C.c_char_p
-            native_version = self._lib.hy_mt2_version()
-            version = native_version.decode("utf-8", "replace") if native_version is not None else None
-            if version != expected_version:
-                raise TranslationError(
-                    -5, f"Native SDK version mismatch (expected {expected_version!r}, found {version!r})"
-                )
+            load_runtime_library()
+            self._lib = C.CDLL(str(Path(library).expanduser().resolve(strict=True)))
         signatures = {
             "hy_mt2_create": ([C.c_char_p, C.POINTER(Options)], C.c_void_p),
             "hy_mt2_destroy": ([C.c_void_p], None),
@@ -103,28 +117,30 @@ class _NativeModel:
         for name, (args, result) in signatures.items():
             f = getattr(self._lib, name)
             f.argtypes, f.restype = args, result
-        if runtime is not None and not isinstance(runtime, Runtime):
+        if runtime is not None and not isinstance(runtime, _runtime.Runtime):
             raise TypeError("runtime must be this provider's Runtime")
-        self.runtime = runtime if runtime is not None else Runtime()
-        self._owns_runtime = runtime is None
-        self._lib.hy_mt2_create_with_runtime.argtypes = [C.c_char_p, C.POINTER(Options), C.c_void_p, C.POINTER(C.c_void_p)]
-        self._lib.hy_mt2_create_with_runtime.restype = C.c_int
+        self.runtime = runtime
+        create = self._lib.hy_mt2_create_with_runtime
+        create.argtypes = [C.c_char_p, C.POINTER(Options), C.c_void_p, C.POINTER(C.c_void_p)]
+        create.restype = C.c_int
         options = Options(C.sizeof(Options), max_input_tokens)
+        directory = str(self.model_dir).encode()
         try:
-            self.runtime._check_process()
-            with self.runtime._lock:
-                native_runtime = self.runtime._bind(self._lib)
-                self._lib.hy_mt2_create_with_runtime(str(self.model_dir).encode(), C.byref(options), native_runtime, C.byref(self._engine_slot))
+            if runtime is None:
+                create(directory, C.byref(options), None, C.byref(self._engine_slot))
+            else:
+                # Check the process before taking a lock that could have been inherited.
+                with runtime.borrow_handle() as handle:
+                    create(directory, C.byref(options), handle, C.byref(self._engine_slot))
             self._handle = self._engine_slot.value
             if not self._handle:
-                raise TranslationError(self._lib.hy_mt2_create_error_code(), self._lib.hy_mt2_create_error().decode("utf-8", "replace"))
+                raise TranslationError(
+                    self._lib.hy_mt2_create_error_code(), self._lib.hy_mt2_create_error().decode("utf-8", "replace")
+                )
         except BaseException:
             self._handle = self._engine_slot.value
-            try:
+            if self._handle:
                 self.close()
-            finally:
-                if self._owns_runtime and not self._engine_slot.value:
-                    self.runtime.close()
             raise
 
     def _check_process(self):
@@ -231,7 +247,6 @@ class _NativeModel:
         finally:
             # The native slot is authoritative if a Python handler interrupts return.
             self._handle=self._engine_slot.value
-        if getattr(self, "_owns_runtime", False): self.runtime.close()
 
     def __enter__(self):
         self._check_process()
@@ -255,11 +270,3 @@ from ._generation import (
 )
 from ._lm import install_llm_api
 LanguageModel = install_llm_api(_NativeModel, NOTIFY)
-
-from ._hardware import (
-    _RUNTIME_ABI,
-    Runtime,
-    QnnOptions as QnnOptions,
-    CpuOptions as CpuOptions,
-    RuntimeNativeError as RuntimeNativeError,
-)

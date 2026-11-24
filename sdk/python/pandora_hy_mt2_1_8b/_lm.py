@@ -10,7 +10,7 @@ from time import monotonic
 
 from ._generation import (GenerationModelMixin, GenerationCapabilities,
     GenerationUpdate, InputError, UnsupportedFeatureError, BusyError,
-    InferenceError, SDK_GENERATION_DEFAULTS)
+    InferenceError)
 
 
 def install_llm_api(native_class, notify_type):
@@ -34,13 +34,14 @@ def install_llm_api(native_class, notify_type):
                 self._lib.hy_mt2_get_result.argtypes = [C.c_void_p, C.c_void_p, C.c_size_t]
                 self._lib.hy_mt2_get_result.restype = C.c_int
                 info = self._info
-                if info.get("generation_defaults") != SDK_GENERATION_DEFAULTS:
-                    raise UnsupportedFeatureError("Native library does not implement unified LM defaults")
+                defaults = info.get("generation_defaults")
+                parameters = tuple(info["supported_generation_parameters"])
+                if not isinstance(defaults, dict) or defaults.keys() != set(parameters):
+                    raise UnsupportedFeatureError("Native library did not report model generation defaults")
                 self._max_input_tokens = info["max_input_tokens"]
-                defaults = SDK_GENERATION_DEFAULTS
                 self._initialize_generation(GenerationCapabilities(
                     ("text",), ("system", "user"), True,
-                    tuple(info["supported_generation_parameters"])), defaults)
+                    parameters), defaults)
             except BaseException as exc:
                 native_class.close(self)
                 if isinstance(exc, AttributeError):
@@ -123,6 +124,8 @@ def install_llm_api(native_class, notify_type):
                     errors.append(exc)
                 finally:
                     done.set()
+                    # Wake a reader waiting for more text as soon as the worker exits.
+                    publish(None)
 
             with ThreadPoolExecutor(max_workers=1, thread_name_prefix="hy-mt2-generation") as executor:
                 # Complete thread startup before native request ownership can pass to it.
@@ -132,7 +135,7 @@ def install_llm_api(native_class, notify_type):
                         self._handle, json.dumps(request, ensure_ascii=False).encode()), "start_messages")
                     executor.submit(work)
                     next_abort = 0.0
-                    while not done.is_set() or not output.empty():
+                    while True:
                         if cancel.is_set() and not done.is_set() and monotonic() >= next_abort:
                             self._native_check(self._lib.hy_mt2_abort(self._handle), "abort")
                             next_abort = monotonic() + 0.05
@@ -140,6 +143,8 @@ def install_llm_api(native_class, notify_type):
                             delta = output.get(timeout=0.05)
                         except queue.Empty:
                             continue
+                        if delta is None:
+                            break
                         text += delta
                         yield GenerationUpdate(text, delta)
                     if errors:

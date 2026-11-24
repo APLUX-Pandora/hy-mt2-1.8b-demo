@@ -1,73 +1,89 @@
-# Pandora Runtime Python API v1
+# Runtime
 
-Runtime configures CPU affinity, QNN performance mode, QNN priority and the NPU device. Import `Runtime`, `CpuOptions`, and `QnnOptions` from the model SDK. Pass the configuration as `runtime=` when loading the model. Omit the argument or pass `None` to let the SDK create and manage the default Runtime, using CPU affinity `"default"`, burst performance, normal priority and device 0. `Runtime()` and `CpuOptions()` also select `"default"`; select `"inherit"` explicitly to follow host placement. Backend configuration is managed by the SDK; users do not prepare Genie or HTP configuration files.
+`pandora_hy_mt2_1_8b` · Hardware settings for advanced use: CPU affinity, QNN performance mode, QNN priority and NPU device.
 
-## Configuration
+Most applications do not need this page. When you load a model without `runtime=`, or with `runtime=None`, the SDK applies the default settings below. Use a Runtime only to change those settings.
 
-| Option | Default | Values |
-| --- | --- | --- |
-| `CpuOptions.affinity` | `"default"` | `"inherit"` follows the allowed CPUs of the thread that loads the model. `"default"` selects the SDK's recommended placement for the platform. You can also pass a nonempty collection of CPU IDs, such as `[3, 4]`, from the process's allowed set. |
-| `QnnOptions.performance_mode` | `"burst"` | See the performance modes below. |
-| `QnnOptions.priority` | `"normal"` | `"low"`, `"normal"`, `"normal_high"`, and `"high"`, in ascending order. |
-| `QnnOptions.device_id` | `0` | An NPU device ID from 0 to 2³²−1. The ID must be available on the target device. Unavailable IDs return an error. |
+## Defaults
 
-Active RPC control latency defaults internally to 100 microseconds. RPC polling and low-level voltage/DCVS/sleep settings are SDK-managed backend presets, not additional required user parameters. The common baseline is burst; adding power-saving modes is not required. Any additional supported modes and legacy overrides depend on the actual SDK version and platform.
-
-| Performance mode | Values |
+| Setting | Default |
 | --- | --- |
-| Performance | `"burst"`, `"sustained_high_performance"`, `"high_performance"` |
-| Balanced | `"balanced"`, `"low_balanced"` |
-| Power saving | `"high_power_saver"`, `"power_saver"`, `"low_power_saver"`, `"extreme_power_saver"` |
-| System managed | `"system_settings"` lets the system manage performance settings. |
+| CPU affinity | `"default"`: the SDK's recommended CPUs for the detected SoC |
+| Performance mode | `"burst"` |
+| Priority | `"normal"` |
+| NPU device | `0` |
 
-Available QNN settings depend on the model and platform. See [Runtime support](#runtime-support) for this SDK's supported values. By default, the SDK raises an error when you request an unsupported setting.
+The recommended CPUs are QCS8625: CPU 2, 3, 7 (`0x8c`); QCS8275: CPU 1, 2, 3 (`0x0e`); all other SoCs, including QCS8550 and QCS9075: CPU 5, 6, 7 (`0xe0`).
 
-### Runtime support
+A six-core QCS8550 uses CPU 3, 4, 5 (`0x38`).
 
-Hy-MT2 supports these Runtime settings:
+## Options
 
-- `QnnOptions.performance_mode`: `"burst"` only.
-- `QnnOptions.priority`: `"normal"` only.
-- `QnnOptions.device_id`: an explicit NPU device ID available on the target. The default is `0`.
-- `CpuOptions.affinity`: `"default"`, `"inherit"`, or a nonempty list of allowed CPU IDs.
-- RPC control latency and polling use SDK-managed settings. User overrides are unsupported.
+| Option | Values |
+| --- | --- |
+| `CpuOptions.affinity` | `"default"`, or a nonempty list of CPU IDs such as `[1, 2, 3]`. The CPUs must exist, be online and be allowed for the process. |
+| `QnnOptions.performance_mode` | One of the performance modes below. |
+| `QnnOptions.priority` | `"low"`, `"normal"`, `"normal_high"` or `"high"`. |
+| `QnnOptions.device_id` | An NPU device ID available on the target, for example `1` for the second NPU on QCS9075. |
 
-## Python usage
+Invalid types or values raise an error when the Runtime is created. Unsupported settings, missing CPUs and unavailable devices raise an error; the SDK never ignores, narrows or replaces a setting silently. Settings are fixed for the lifetime of a Runtime.
 
-Create the Runtime, pass it to the model loader, and release both objects explicitly. For packages with SoC/QNN variants, follow the model's download instructions to select the resources for your device. Pass the local model directory and the Runtime to the loader. The model loader and inference call depend on the SDK.
+## Performance modes
 
-<!-- BEGIN PANDORA RUNTIME USAGE -->
-After [SDK/model preparation](README.md), from the repository root in the same activated .venv:
+| Mode | RPC polling |
+| --- | --- |
+| `"burst"`, `"sustained_high_performance"`, `"high_performance"` | On |
+| `"balanced"`, `"low_balanced"` | Off |
+| `"high_power_saver"`, `"power_saver"`, `"low_power_saver"`, `"extreme_power_saver"` | Off |
+| `"system_settings"` | Off; the system manages performance |
+
+The modes are listed from highest performance to lowest power. The SDK applies the RPC settings recommended by QNN for each mode; they are not user options.
+
+## Supported by this SDK
+
+| Option | Supported values |
+| --- | --- |
+| CPU affinity | All values above |
+| Performance mode | All listed modes except `system_settings`, which raises an unsupported-mode error when loading the model. |
+| Priority | All values above |
+| NPU device | All values available on the target |
+
+## Usage
+
 ```python
 from pandora_hy_mt2_1_8b import LanguageModel, Runtime, CpuOptions, QnnOptions
 
-runtime = Runtime(cpu=CpuOptions(affinity="default"), qnn=QnnOptions(device_id=0))
-try:
+with Runtime(cpu=CpuOptions(affinity="default"),
+             qnn=QnnOptions(performance_mode="balanced", device_id=0)) as runtime:
     with LanguageModel.from_pretrained("models", runtime=runtime) as model:
-        print(model.generate(
-            [{"role": "user", "content": "将以下文本翻译为中文，注意只需要输出翻译后的结果，不要额外解释：\n\nHello."}],
-            max_new_tokens=4096,
-            do_sample=True,
-            temperature=0.7,
-            top_p=0.6,
-            top_k=20,
-            repetition_penalty=1.05,
-        ).text)
-        print(runtime.status())
-finally:
-    runtime.close()
+        print(model.generate([{"role": "user", "content": "将以下文本翻译为中文，注意只需要输出翻译后的结果，不要额外解释：\n\nHello."}]).text)
+    print(runtime.status())
 ```
 
-See [model-specific Runtime settings](#runtime-support) for supported settings.
-<!-- END PANDORA RUNTIME USAGE -->
+## Status
 
-Configuration is fixed for the lifetime of a Runtime. Create a new Runtime to use different settings. When your application creates the Runtime, finish any in-flight inference and close streams or caches first, then close the attached models and finally the Runtime. Runtime and model objects also support context managers. Each process creates its own Runtime from the model SDK it uses.
+`runtime.status()` returns a read-only snapshot of the settings submitted to the backend:
 
-Choose another available NPU with `QnnOptions(device_id=1)` inside `Runtime(qnn=...)`; device_id is not a top-level Runtime argument. Parameter type/range checks happen at construction, while device availability may be checked at first model load for lazy initialization. A bool, float, negative or out-of-range value is invalid. Changing devices requires a new Runtime and model; there is no live context migration. The execution device and its power client must match. CPU placement and model SoC/QNN resource selection remain separate. Unsupported fields or mismatched native libraries must not be silently ignored; use the model SDK's stated supported interface/version.
+| Field | Meaning |
+| --- | --- |
+| `soc_id` | Detected SoC ID, or `None` |
+| `cpu_affinity` | Requested affinity |
+| `cpu_mask` | Submitted CPU mask, such as `"0xe0"` |
+| `performance_mode`, `priority`, `device_id` | Submitted QNN settings |
+| `rpc_control_latency_us`, `rpc_polling_time_us` | Submitted RPC settings |
 
+## Lifecycle
 
-The native Runtime selects default CPU placement from the detected platform and its hardware CPU count. The full configured set must be present, online and allowed by the process affinity. An unreadable hardware profile or an unsupported CPU count for a known platform returns an error. Python, C and Web use the same defaults. Explicit inherit and CPU collections
-retain their semantics. Configuration identity, detected hardware count, selected
-mask and observed thread masks are distinct state fields. In CPU status,
-`backend_cpu_mask` is the value submitted in the backend configuration.
-`backend_cpu_mask_read_back` indicates whether the backend confirmed the value.
+Without `runtime=`, each model owns its default Runtime and releases it on close. A Runtime you create can be shared by several models of this SDK in one process; each model keeps a reference. Finish requests and close streams first, then close the models, then close the Runtime. Closing the Runtime early does not invalidate loaded models. `close()` is safe to call twice.
+
+Run the NPU models of different Demos in separate processes.
+
+Hy-MT2 allows one loaded model per process. Reuse an open Runtime for successive models.
+
+### Migrating from the previous Runtime
+
+- Use `Runtime(qnn=QnnOptions(...), cpu=CpuOptions(...))`. Replace the positional QNN argument and the `options=` keyword with `qnn=`.
+- Replace `CpuOptions("inherit")` with the default affinity or an explicit list of allowed CPU IDs.
+- Read hardware settings from the flat `runtime.status()` snapshot. Use `dict(runtime.status())` to obtain a mutable copy.
+
+C applications use the same settings through [pandora_runtime.h](include/pandora_runtime.h); see the [C ABI](../docs/C_ABI.md).

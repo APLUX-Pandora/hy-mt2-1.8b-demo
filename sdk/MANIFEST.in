@@ -1,3 +1,4 @@
 include native-library.json
 recursive-include lib *
-include qnn-runtime-files.json
+include qnn-runtime-files.json qnn-runtime-manifest.json
+include wheels/pandora_runtime-*.whl

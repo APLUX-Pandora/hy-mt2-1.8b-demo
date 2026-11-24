@@ -57,6 +57,7 @@ class BuildSDK(build_py):
         target.mkdir(parents=True, exist_ok=True)
         shutil.copytree(qnn_source, target / "qnn248", dirs_exist_ok=True)
         shutil.copy2(manifest_path, target / manifest_path.name)
+        shutil.copy2(ROOT / "qnn-runtime-manifest.json", target / "qnn-runtime-manifest.json")
         shutil.copy2(library, target / library.name)
         shutil.copy2(ROOT / "native-library.json", target / "native-library.json")
         for name in notices:

@@ -59,6 +59,8 @@ models/
 
 The SDK reads `models.json`, checks that the shared resources and one complete target are present, and reports what is missing. `hf download` verifies each large file's checksum.
 
+The SDK reads the standalone tokenizer from the model directory and the Genie dialog and HTP configuration from the encrypted model package. The package also includes a tokenizer for AidGen. The manifest records the chat template opening in `chat_template.bos` and the cache path and covered token IDs in `resources.prefix`. The SDK renders the full template and rejects a mismatch before inference.
+
 ## Troubleshooting
 
 | Message or symptom | What to do |

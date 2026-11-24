@@ -7,8 +7,6 @@ import threading
 from types import MappingProxyType
 
 
-SDK_GENERATION_DEFAULTS = {'max_new_tokens': 256, 'do_sample': False, 'temperature': 1.0, 'top_p': 1.0, 'top_k': 0, 'repetition_penalty': 1.0}
-
 
 class GenerationError(RuntimeError):
     def __init__(self, message, *, native_code=None, operation=None):
@@ -147,8 +145,8 @@ def prepare_request(prompt, messages, parameters, supported):
                 valid = valid and value <= 1
         if not valid:
             raise InputError(f"Invalid {key}")
-    # Genie selects argmax at top_k=1 regardless of the do_sample keyword.
-    greedy = explicit.get("do_sample", False) is False or explicit.get("top_k") == 1
+    # The native request validator also checks the loaded model defaults.
+    greedy = explicit.get("do_sample") is False or explicit.get("top_k") == 1
     if greedy and any(k in explicit for k in ("temperature", "top_p", "top_k")):
         raise InputError("Explicit sampling parameters conflict with effective greedy decoding")
     missing = set(explicit) - set(supported)

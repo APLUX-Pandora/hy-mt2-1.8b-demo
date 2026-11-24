@@ -1,6 +1,6 @@
 {
-  "module_version": "0.1.1",
-  "module_commit": "533ca28102decd7b306b6f7ec9a4dc503684f35c",
+  "module_version": "0.2.0",
+  "module_commit": "b9dc0e27131f165f9a015cf6a6c27e8ebc53f61a",
   "files": [
     {
       "path": "LICENSE.pdf",
@@ -74,8 +74,8 @@
     },
     {
       "path": "inventory.json",
-      "bytes": 7845,
-      "sha256": "0b5b219ce2dac341cfe149f9af7256cb728daf11094f51303d9621ebb51bbb44"
+      "bytes": 7891,
+      "sha256": "f76fabeac0f4c8caa72e76892aa73b5f31dcd46c19254704fa45649f868d097d"
     },
     {
       "path": "sdk.yaml",
